@@ -28,3 +28,11 @@ Install Homebrew using the official installer:
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+
+Terraform CLIInstall the HashiCorp Terraform CLI via Homebrew:Bashbrew tap hashicorp/tap
+brew install hashicorp/tap/terraform
+AWS CLIInstall the official Amazon Web Services command line tool:Bashbrew install awscli
+2. AWS Authentication & Security ConfigurationConfigure your local AWS credentials securely to allow Terraform to communicate with your AWS account.Run the configuration command:Bashaws configure
+Verify active identity connection:Bashaws sts get-caller-identity
+3. Core Terraform Lifecycle WorkflowExecute these commands sequentially inside your project directory to manage infrastructure:CommandPurposeterraform initInitializes the working directory and downloads required provider plugins.terraform validatePerforms an offline syntax and configuration check on your HCL files.terraform planGenerates an execution preview mapping your configuration against actual AWS resources.terraform applyProvisions or updates the physical cloud infrastructure.terraform destroyTears down all managed infrastructure to prevent idle resource costs.
