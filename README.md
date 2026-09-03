@@ -16,15 +16,23 @@ This repository provides modular Infrastructure as Code (IaC) blueprints to prov
 
 ## 1. Prerequisites & Tooling Setup
 
-Ensure your local development environment has the required CLI tools installed before deploying the infrastructure.
+Before deploying the infrastructure, ensure the following tools are installed and available in your `PATH`.
 
-### Homebrew
+| Tool | Purpose | Version |
+|------|---------|---------|
+| Homebrew | Package management | Latest |
+| Terraform | Infrastructure as Code | ≥ 5.0 |
+| AWS CLI | AWS resource management | Latest |
+| Git | Source control | Latest |
 
-Homebrew is a package manager for macOS and Linux that simplifies installation of development tools and dependencies.
+### 1.1 Homebrew
 
-#### macOS
+Homebrew provides a convenient way to install and manage development dependencies on macOS and Linux.
 
-Install Homebrew using the official installer:
+<details>
+<summary><strong>macOS</strong></summary>
+
+Install Homebrew:
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
