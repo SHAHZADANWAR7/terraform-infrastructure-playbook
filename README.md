@@ -30,12 +30,14 @@ Before deploying the infrastructure, ensure the following tools are installed an
 Homebrew provides a convenient way to install and manage development dependencies on macOS and Linux.
 
 <details>
-<summary><strong>macOS</strong></summary>
+<summary>macOS</summary>
 
 Install Homebrew:
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+</details>
 
 ### 1.2 Terraform CLI
 
