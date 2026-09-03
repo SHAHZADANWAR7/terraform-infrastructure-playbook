@@ -36,3 +36,12 @@ Install Homebrew:
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+### 1.2 Terraform CLI
+
+Install the HashiCorp Terraform command line interface using Homebrew, then verify the installation:
+
+```bash
+brew tap hashicorp/tap
+brew install hashicorp/tap/terraform
+terraform -version
