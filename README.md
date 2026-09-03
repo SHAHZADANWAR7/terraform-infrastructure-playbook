@@ -164,3 +164,24 @@ Address common issues encountered during Terraform deployments with these standa
 * **`terraform refresh`**: Updates the state file against real-world infrastructure without modifying the actual cloud resources.
 * **`terraform validate`**: Checks your configuration files for syntax errors and internal consistency independently of any remote state or provider.
 * **`terraform fmt`**: Automatically rewrites configuration files to canonical formatting and style standards.
+
+### 9. Project Directory Structure
+
+Organize your files within the workspace following standard conventions for modularity and maintainability:
+
+```text
+my-terraform-project/
+├── main.tf          # Core resource definitions
+├── variables.tf     # Input variables
+├── outputs.tf       # Exported resource attributes
+├── backend.tf       # Remote state configuration
+└── terraform.tfvars # Environment-specific variable values
+
+```
+### 10. Next Steps & Conclusion
+
+Review your completed infrastructure setup and proceed with building out your specific AWS cloud modules:
+
+* Verify that your remote state backend bucket and DynamoDB locking table are active.
+* Begin writing custom resource declarations inside your `main.tf` file.
+* Commit your configuration securely to your version control system while ensuring sensitive files like `.tfvars` are excluded via `.gitignore`.
