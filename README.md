@@ -151,6 +151,171 @@ terraform show       # Displays detailed attributes of managed resources
 terraform state list # Lists all tracked resources in the workspace
 
 ```
+
+### 2.5 Anatomy of a Terraform Resource Block
+
+To build any cloud infrastructure resource in AWS using Terraform, you use a standardized **resource block** structure. 
+
+#### General Syntax Structure
+
+```hcl
+resource "provider_resource_type" "resource_local_name" {
+  argument_name = "argument_value"
+  argument_name = "argument_value"
+}
+
+```
+### Component Breakdown
+
+* **`resource`**: The mandatory keyword telling Terraform you want to manage a cloud infrastructure asset.
+* **`provider_resource_type`**: The specific type of resource provided by the cloud vendor (e.g., `aws_s3_bucket`, `aws_instance`, `aws_dynamodb_table`). The prefix (`aws_`) corresponds to your AWS provider.
+* **`resource_local_name`**: A unique label you choose yourself. It is used inside your Terraform project to reference this specific resource from other blocks, variables, or outputs (e.g., `aws_s3_bucket.test_bucket.id`).
+* **Arguments (`{ ... }`)**: The configuration parameters defined by AWS for that resource. Some arguments are required (like naming a bucket), while others are optional.
+
+### Practical Resource Examples
+
+#### 1. Amazon S3 Bucket
+```hcl
+resource "aws_s3_bucket" "test_bucket" {
+  bucket = "shahzad-terraform-resource-test-2026"
+}
+```
+#### 2. Amazon EC2 Instance
+```hcl
+resource "aws_instance" "web_server" {
+  ami           = "ami-0c55b159cbfafe1f0"
+  instance_type = "t2.micro"
+}
+```
+#### 3. Amazon DynamoDB Table
+```hcl
+resource "aws_dynamodb_table" "app_locks" {
+  name         = "app-lock-table"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
+
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+}
+```
+#### 4. Amazon VPC (Virtual Private Cloud)
+```hcl
+resource "aws_vpc" "main_vpc" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  
+  tags = {
+    Name = "production-vpc"
+  }
+}
+```
+
+#### 5. AWS Subnet
+```hcl
+resource "aws_subnet" "public_subnet" {
+  vpc_id            = aws_vpc.main_vpc.id
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = "us-east-1a"
+
+  tags = {
+    Name = "public-subnet-1"
+  }
+}
+```
+#### 6. AWS Security Group
+```hcl
+resource "aws_security_group" "web_sg" {
+  name        = "web-server-sg"
+  description = "Allow inbound HTTP and SSH traffic"
+  vpc_id      = aws_vpc.main_vpc.id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+```
+#### 7. AWS IAM User
+```hcl
+resource "aws_iam_user" "ci_cd_user" {
+  name = "deployment-automation-user"
+}
+```
+
+#### 8. Amazon SNS Topic (Simple Notification Service)
+```hcl
+resource "aws_sns_topic" "alerts" {
+  name = "infrastructure-alerts-topic"
+}
+
+```
+
+
+#### 9. AWS Lambda Function
+```hcl
+resource "aws_lambda_function" "my_lambda" {
+  filename      = "lambda_payload.zip"
+  function_name = "my_sample_lambda"
+  role          = "arn:aws:iam::123456789012:role/lambda-execution-role"
+  handler       = "index.handler"
+  runtime       = "nodejs18.x"
+}
+
+```
+
+#### 10. Amazon SQS Queue (Simple Queue Service)
+```hcl
+resource "aws_sqs_queue" "my_queue" {
+  name                      = "my-app-queue"
+  delay_seconds             = 90
+  max_message_size          = 2048
+  message_retention_seconds = 86400
+}
+
+```
+### 2.5 Anatomy of a Terraform Resource Block
+#### 25 Essential Terraform Commands
+
+* **`terraform init`**: Initializes a working directory containing Terraform configuration files, downloads necessary provider plugins, and sets up backend storage.
+* **`terraform plan`**: Generates and displays an execution preview showing what resources will be created, modified, or destroyed.
+* **`terraform apply`**: Executes the actions proposed by the execution plan to provision or update real-world infrastructure.
+* **`terraform destroy`**: Completely tears down and deletes all remote infrastructure resources managed by the configuration.
+* **`terraform validate`**: Checks the syntax, structure, and internal consistency of configuration files without hitting provider APIs.
+* **`terraform fmt`**: Automatically rewrites configuration files to match the canonical HCL formatting and style standard.
+* **`terraform show`**: Displays detailed, human-readable attributes of a saved execution plan or current state file.
+* **`terraform output`**: Extracts and displays output variables defined within the configuration.
+* **`terraform state list`**: Lists all individual resources currently tracked inside the project's state file.
+* **`terraform state show`**: Displays detailed attribute data for a specific resource tracked in the state.
+* **`terraform state mv`**: Relocates or renames resource addresses within the state file without altering physical infrastructure.
+* **`terraform state rm`**: Removes specified resources from state tracking without deleting the actual cloud assets.
+* **`terraform state pull`**: Manually downloads and outputs the remote state file contents locally.
+* **`terraform state push`**: Manually uploads a local state file directly to the remote storage backend.
+* **`terraform import`**: Brings pre-existing, manually created cloud infrastructure under Terraform management by binding it to a resource address.
+* **`terraform console`**: Launches an interactive shell session to evaluate and test HCL expressions and interpolation functions.
+* **`terraform graph`**: Produces a visual DOT-format diagram representing dependency relationships among configured resources.
+* **`terraform workspace new`**: Creates a brand-new isolated workspace for managing separate operational environments.
+* **`terraform workspace select`**: Switches the active session to a different designated workspace.
+* **`terraform workspace list`**: Displays all available workspaces configured within the project.
+* **`terraform workspace show`**: Outputs the name of the currently active workspace.
+* **`terraform taint`**: Manually flags a specific resource to be destroyed and re-provisioned from scratch on the next apply.
+* **`terraform untaint`**: Removes the taint flag from a resource, preventing it from being automatically forced into re-creation.
+* **`terraform force-unlock`**: Manually breaks and releases a stuck state lock using a designated lock ID.
+* **`terraform version`**: Prints the currently installed version of the Terraform CLI binary.
+
+
+
+  
 ### 3. State Management & Backend Configuration
 
 Configure your remote state backend to securely store Terraform state files in an Amazon S3 bucket with DynamoDB state locking:
@@ -166,6 +331,8 @@ terraform {
 }
 
 ```
+
+
 ### 4. Variables & Parameterization
 
 Define input variables in a `variables.tf` file to parameterize your infrastructure configuration:
