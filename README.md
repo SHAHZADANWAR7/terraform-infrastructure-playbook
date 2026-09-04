@@ -80,15 +80,77 @@ git --version
 brew --version
 
 ```
-### 2. Infrastructure Provisioning
+## 2. Remote Backend Bootstrap & Infrastructure Provisioning
 
-Initialize your working directory and deploy the core infrastructure stack using Terraform:
+Before initializing Terraform or deploying resources with a remote state, you must manually bootstrap your state storage and locking infrastructure in AWS to resolve the initial dependency cycle.
+
+### 2.1 Pre-Initialization AWS Setup
+1. **Create the S3 State Bucket**: Create a globally unique S3 bucket in your target region (e.g., `us-east-1`) to securely store your `terraform.tfstate` file.
+2. **Create the DynamoDB Lock Table**: Create a DynamoDB table named `terraform-lock-table` with a partition key (Primary Key) named **`LockID`** set to type **String** (`S`) to enable state locking and prevent concurrent write collisions.
+3. **Authenticate AWS CLI**: Run the configuration wizard in your terminal and enter your IAM user credentials and default region (`us-east-1`):
 
 ```bash
-terraform init
-terraform apply
+aws configure
+aws sts get-caller-identity
+```
+### 2.2 Creating and Populating `main.tf`
+
+Create your primary configuration file directly from your terminal workspace using the touch command:
+
+```bash
+touch main.tf
+```
+Open `main.tf` in your code editor and paste the complete core configuration block:
+
+```hcl
+terraform {
+  required_version = ">= 1.0.1"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+  backend "s3" {
+    bucket         = "shahzads-terraform-sandbox-bucket-2026"
+    key            = "environment/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "terraform-lock-table"
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+```
+### Breakdown of the Configuration Blocks
+
+* **`terraform { required_version = ">= 1.0.1" }`**: Enforces that the local Terraform CLI binary must be at least version 1.0.1 or higher to execute the project, preventing compatibility errors.
+* **`required_providers` block**: Tells Terraform to download and utilize the official HashiCorp AWS provider plugin, pinning it to version 5.x (`~> 5.0`).
+* **`backend "s3" { ... }` block**: Instructs Terraform to migrate and store its state file remotely inside your designated S3 bucket (`shahzads-terraform-sandbox-bucket-2026`) instead of locally, utilizing your DynamoDB table (`terraform-lock-table`) for distributed state locking.
+* **`provider "aws" { region = "us-east-1" }` block**: Sets the default target geographical data center region (`us-east-1`) for all AWS resources managed within this configuration.
+
+  ### 2.3 Execution Workflow
+
+Initialize your working directory, validate the syntax, preview the execution plan, and apply the configuration:
+
+```bash
+terraform init      # Initializes plugins and migrates state to the remote S3 backend
+terraform validate  # Verifies configuration syntax consistency
+terraform plan      # Generates an execution preview
+terraform apply     # Provisions infrastructure and writes state locks to DynamoDB
+
 ```
 
+### 2.4 State Verification
+
+Confirm that your remote backend is actively tracking your infrastructure by running state inspection commands:
+
+```bash
+terraform show       # Displays detailed attributes of managed resources
+terraform state list # Lists all tracked resources in the workspace
+
+```
 ### 3. State Management & Backend Configuration
 
 Configure your remote state backend to securely store Terraform state files in an Amazon S3 bucket with DynamoDB state locking:
