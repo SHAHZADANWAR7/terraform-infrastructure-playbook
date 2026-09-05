@@ -399,7 +399,153 @@ output "my_bucket_arn" {
 
 * **How Referencing Works**: Instead of using `var.` (which is only for variables), outputs point directly to the built resource's address (`resource_type.local_name.attribute`) to pull its live data directly from Terraform's memory state after deployment.
 
-### 7. Resource Cleanup & Destruction
+
+
+## 7. Connecting Multiple Resources & Inter-Resource Dependencies
+
+Think of this like building a Lego town where your toy car needs a road to drive on, and your house needs a power line to turn on its lights. 
+
+* **The Problem It Solves**: Real-world cloud applications are never just a single, lonely S3 bucket sitting by itself. They consist of a web of connected pieces—like a Virtual Private Cloud (VPC) network, network subnets, security guard doors (security groups), and computer servers (EC2 instances)—that must interact with one another securely.
+* **The Purpose**: It teaches you how to wire multiple cloud resources together so they form a functional architecture.
+* **How It Works (Implicit vs. Explicit Dependencies)**: 
+  * **Implicit Dependencies**: Terraform is smart. If your subnet needs to know the ID of the VPC before it can be built, you pass the reference directly (e.g., `vpc_id = aws_vpc.main_vpc.id`). Terraform automatically reads this wiring, figures out the puzzle, and builds the VPC *first* before attempting to build the subnet. Nothing breaks because the order of creation is handled automatically!
+
+### Example: Connecting a VPC and a Subnet
+
+```hcl
+# 1. Build the foundational cloud land (VPC)
+resource "aws_vpc" "main_vpc" {
+  cidr_block           = "10.0.0.0/16"
+  enable_dns_hostnames = true
+  
+  tags = {
+    Name = "production-vpc"
+  }
+}
+
+# 2. Build a neighborhood block (Subnet) inside that exact VPC
+resource "aws_subnet" "public_subnet" {
+  # We use the VPC's ID reference here to wire them together!
+  vpc_id            = aws_vpc.main_vpc.id
+  cidr_block        = "10.0.1.0/24"
+  availability_zone = "us-east-1a"
+
+  tags = {
+    Name = "public-subnet-1"
+  }
+}
+```
+
+### Additional Example: Connecting a Server to a Subnet and Security Guard
+
+In cloud networks, a computer server cannot just sit out in the open; it needs to live inside a neighborhood block (subnet) and have a security guard door (security group) controlling who can talk to it.
+
+```hcl
+# 3. Build a Security Guard Door (Security Group) inside our VPC
+resource "aws_security_group" "web_sg" {
+  name        = "web-server-sg"
+  description = "Allow inbound web traffic"
+  # We plug the VPC ID right here so the security group knows which network it belongs to!
+  vpc_id      = aws_vpc.main_vpc.id
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# 4. Build a Computer Server (EC2 Instance) plugged into our Subnet and Security Group
+resource "aws_instance" "web_server" {
+  ami           = "ami-0c55b159cbfafe1f0"
+  instance_type = "t2.micro"
+  
+  # We plug the Subnet ID here so the server drops into the correct neighborhood block!
+  subnet_id     = aws_subnet.public_subnet.id
+  
+  # We attach our security guard ID here too!
+  vpc_security_group_ids = [aws_security_group.web_sg.id]
+
+  tags = {
+    Name = "my-first-connected-server"
+  }
+}
+
+```
+
+* **Why This Matters**: Terraform looks at all these references (`aws_vpc.main_vpc.id`, `aws_subnet.public_subnet.id`, `aws_security_group.web_sg.id`) and automatically builds the VPC first, then the Subnet, then the Security Group, and finally turns on the EC2 Server last. It figures out the puzzle entirely on its own!
+
+### Additional Simple Example: An S3 Bucket Notification Trigger
+
+Think of this like a mail slot on a clubhouse door: when a letter (file) is dropped inside, it automatically rings a doorbell (SNS topic) to wake someone up.
+
+```hcl
+# 1. Build a Clubhouse Mailbox (S3 Bucket)
+resource "aws_s3_bucket" "upload_bucket" {
+  bucket = "shahzad-media-upload-bucket-2026"
+}
+
+# 2. Build a Doorbell (SNS Topic) that alerts us when something happens
+resource "aws_sns_topic" "upload_alerts" {
+  name = "bucket-upload-notification-topic"
+}
+
+# 3. Connect the Mailbox to the Doorbell using a Notification Rule
+resource "aws_s3_bucket_notification" "bucket_notice" {
+  # We point directly to our S3 bucket ID here to wire them together!
+  bucket = aws_s3_bucket.upload_bucket.id
+
+  topic {
+    # We point directly to our SNS topic ARN here so the mailbox knows who to ring!
+    topic_arn     = aws_sns_topic.upload_alerts.arn
+    events        = ["s3:ObjectCreated:*"]
+  }
+}
+```
+
+* **Why This Matters**: Terraform sees that the notification rule cannot exist until both the bucket and the doorbell are created, and it knows the mailbox must exist before you can hook a notification to it. It automatically figures out the correct construction order without you having to guess or manually sequence them!
+
+### Additional Simple Example: An IAM User and Access Key
+
+Think of this like making a secret clubhouse ID card for a new member: you have to create the person's account *first* before you can hand them a physical key or badge.
+
+```hcl
+# 1. Create the Clubhouse Member (IAM User)
+resource "aws_iam_user" "new_member" {
+  name = "alex-developer-2026"
+}
+
+# 2. Create a Security Key Card specifically for that Member
+resource "aws_iam_access_key" "member_key" {
+  # We link this key directly to our user's name so it belongs to the right person!
+  user = aws_iam_user.new_member.name
+}
+```
+* **Why This Matters**: Terraform understands that a security key cannot be generated for a user that doesn't exist yet. It automatically creates the IAM user first, waits for it to finish, and then generates the access key second.
+
+
+### Additional Simple Example: An EC2 Server and a Permanent Public IP (Elastic IP)
+
+Think of this like buying a brand-new smartphone and assigning it a permanent phone number: you have to unbox and turn on the phone *first* before you can link that special phone number to it.
+
+```hcl
+# 1. Build the Smartphone (EC2 Instance)
+resource "aws_instance" "app_server" {
+  ami           = "ami-0c55b159cbfafe1f0"
+  instance_type = "t2.micro"
+}
+
+# 2. Reserve a Permanent Phone Number (Elastic IP) and attach it
+resource "aws_eip" "server_ip" {
+  # We plug our server ID here so the network knows which server gets this permanent number!
+  instance = aws_instance.app_server.id
+}
+```
+
+* **Why This Matters**: Terraform knows that you cannot attach a permanent public IP address to a server that doesn't exist yet. It automatically creates the EC2 instance first, retrieves its unique ID, and then binds the Elastic IP address to it in the correct order.
+
+### 8. Resource Cleanup & Destruction
 
 Tear down your provisioned infrastructure safely when it is no longer needed to avoid ongoing cloud costs:
 
@@ -407,7 +553,7 @@ Tear down your provisioned infrastructure safely when it is no longer needed to 
 terraform destroy
 
 ```
-### 8. Workflow Summary & Best Practices
+### 9. Workflow Summary & Best Practices
 
 Review the core lifecycle commands for managing your Terraform project:
 
