@@ -545,7 +545,83 @@ resource "aws_eip" "server_ip" {
 
 * **Why This Matters**: Terraform knows that you cannot attach a permanent public IP address to a server that doesn't exist yet. It automatically creates the EC2 instance first, retrieves its unique ID, and then binds the Elastic IP address to it in the correct order.
 
-### 8. Resource Cleanup & Destruction
+## 8. Organizing Your Code into Reusable Modules
+
+Think of this like packing all the pieces needed to build a single park into a neat little box called a **Park Kit**, so you can open it up and build identical parks anywhere in your Lego city without making a messy pile of loose bricks.
+
+* **The Problem It Solves**: As your infrastructure grows, keeping everything in one giant, flat folder makes your code repetitive, messy, and hard to update. If you copy-paste server configurations across different environments (like testing and production) and need to change a setting later, you have to hunt down and edit every single copy by hand.
+* **The Purpose**: It lets you write your infrastructure blueprint **once** inside a dedicated folder, and then reuse it like a pre-packaged Lego kit across different projects or environments by simply passing in different variable values. If you need to fix a bug, you fix it inside the module box *once*, and it updates everywhere automatically!
+
+### How a Module Directory is Structured
+
+A module is simply a normal Terraform sub-folder containing its own configuration files:
+
+```text
+my-terraform-project/
+├── main.tf                 # Root file that calls the module
+├── variables.tf            # Root variables
+└── modules/
+    └── server_box/         # <-- Your Reusable Module Folder
+        ├── main.tf         # Resources inside the module (EC2, Security Group)
+        ├── variables.tf    # Inputs required by the module (instance_type, name)
+        └── outputs.tf      # Data exposed back out (server IP, ID)
+
+```
+
+#### 8.1. What Lives Inside the Module Box
+
+Before you can call a module, you need to write the blueprint files that live inside the module folder. 
+
+First, define what settings the module is allowed to accept (`modules/server_box/variables.tf`):
+
+```hcl
+variable "server_name" {
+  type        = string
+  description = "Name for the server"
+}
+
+variable "instance_type" {
+  type        = string
+  description = "The EC2 instance size"
+}
+
+```
+
+Next, use those variables to build the actual cloud resources inside the module (`modules/server_box/main.tf`):
+
+```hcl
+resource "aws_instance" "server" {
+  ami           = "ami-0c55b159cbfafe1f0"
+  instance_type = var.instance_type
+
+  tags = {
+    Name = var.server_name
+  }
+}
+
+```
+
+#### 8.2. Calling the Module from Your Main Code
+
+Instead of writing 50 lines of server code over and over again in your root folder, your main file can summon the module with just a few lines:
+
+```hcl
+# Call our reusable server module and pass it custom settings
+module "my_web_cluster" {
+  source        = "./modules/server_box"
+  
+  # Pass custom values into the module's variables
+  server_name   = "production-web-node"
+  instance_type = "t2.micro"
+}
+
+```
+
+* **Why This Matters**: Modules turn complex, multi-resource architectures into simple building blocks. You don't have to rewrite the plumbing every time you want to spin up a new environment—you just point to the module folder and pass in your custom variables!
+
+
+
+### 9. Resource Cleanup & Destruction
 
 Tear down your provisioned infrastructure safely when it is no longer needed to avoid ongoing cloud costs:
 
@@ -553,7 +629,7 @@ Tear down your provisioned infrastructure safely when it is no longer needed to 
 terraform destroy
 
 ```
-### 9. Workflow Summary & Best Practices
+### 10. Workflow Summary & Best Practices
 
 Review the core lifecycle commands for managing your Terraform project:
 
